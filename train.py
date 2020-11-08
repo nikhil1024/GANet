@@ -46,6 +46,7 @@ print(opt)
 if opt.model == 'GANet11':
     from models.GANet11 import GANet
 elif opt.model == 'GANet_deep':
+    # print("Model used is GANet-deep")
     from models.GANet_deep import GANet
 else:
     raise Exception("No suitable model found ...")
@@ -77,6 +78,8 @@ if opt.resume:
         print("=> loading checkpoint '{}'".format(opt.resume))
         checkpoint = torch.load(opt.resume)
         model.load_state_dict(checkpoint['state_dict'], strict=False)
+        # print("Loaded GANet-deep model successfully")
+        exit()
 #        optimizer.load_state_dict(checkpoint['optimizer'])
     else:
         print("=> no checkpoint found at '{}'".format(opt.resume))

@@ -1,0 +1,12 @@
+CUDA_VISIBLE_DEVICES=0,1,2,3 python train.py --batchSize=8 \
+                --crop_height=240 \
+                --crop_width=528 \
+                --max_disp=192 \
+                --thread=16 \
+                --data_path='../data_scene_flow_2015/training/' \
+                --training_list='lists/kitti2015_train.list' \
+                --save_path='./trained_models/finetune_kitti2015' \
+                --kitti2015=1 \
+                --shift=3 \
+                --resume='./trained_models/sceneflow_epoch_10.pth' \
+                --nEpochs=800 2>&1 |tee logs/log_finetune_kitti2015.txt
