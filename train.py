@@ -138,6 +138,7 @@ def train(epoch):
 
     print("===> Epoch {} Complete: Avg. Loss: {:.4f}, Avg. Error: ({:.4f} {:.4f} {:.4f})".format(epoch, epoch_loss / valid_iteration,epoch_error0/valid_iteration,epoch_error1/valid_iteration,epoch_error2/valid_iteration))
 
+
 def val():
     epoch_error2 = 0
 
@@ -155,14 +156,29 @@ def val():
         valid = target[mask].size()[0]
         if valid>0:
             with torch.no_grad():
-                disp2 = model(input1,input2)
+                if opt.model == 'GANet11':
+                    disp1, disp2 = model(input1, input2)
+                    disp0 = (disp1 + disp2)/2.
+                elif opt.model == 'GANet_deep':
+                    disp0, disp1, disp2 = model(input1, input2)
+                
+                # error2 = torch.mean(torch.abs(disp2[mask] - target[mask]))
+                error0 = torch.mean(torch.abs(disp0[mask] - target[mask])) 
+                error1 = torch.mean(torch.abs(disp1[mask] - target[mask]))
                 error2 = torch.mean(torch.abs(disp2[mask] - target[mask]))
+                
                 valid_iteration += 1
-                epoch_error2 += error2.item()      
-                print("===> Test({}/{}): Error: ({:.4f})".format(iteration, len(testing_data_loader), error2.item()))
+                
+                # epoch_error2 += error2.item()
+                epoch_error0 += error0.item()
+                epoch_error1 += error1.item()
+                epoch_error2 += error2.item()
+                print("===> Test({}/{}): Error: ({:.4f} {:.4f} {:.4f})".format(iteration, len(testing_data_loader), error0.item(), error1.item(), error2.item()))
 
-    print("===> Test: Avg. Error: ({:.4f})".format(epoch_error2 / valid_iteration))
-    return epoch_error2 / valid_iteration
+    print("===> Test: Avg. Error: ({:.4f} {:.4f} {:.4f})".format(epoch_error0/valid_iteration, epoch_error1/valid_iteration, epoch_error2/valid_iteration))
+    
+    return epoch_error0/valid_iteration, epoch_error1/valid_iteration, epoch_error2/valid_iteration
+
 
 def save_checkpoint(save_path, epoch,state, is_best):
     filename = save_path + "_epoch_{}.pth".format(epoch)
@@ -170,6 +186,7 @@ def save_checkpoint(save_path, epoch,state, is_best):
     if is_best:
         shutil.copyfile(filename, save_path + '_best.pth')
     print("Checkpoint saved to {}".format(filename))
+
 
 def adjust_learning_rate(optimizer, epoch):
     if epoch <= 400:
@@ -180,19 +197,23 @@ def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
+
 if __name__ == '__main__':
-    error=100
+    best_val_error=100
     for epoch in range(1, opt.nEpochs + 1):
 #        if opt.kitti or opt.kitti2015:
         adjust_learning_rate(optimizer, epoch)
         train(epoch)
         is_best = False
-#        loss=val()
-#        if loss < error:
-#            error=loss
-#            is_best = True
+        error1, error2, error3 = val()
+        average_val_error = (error1 + error2 + error3) / 3
+        if average_val_error < best_val_error:
+            best_val_error = average_val_error
+            is_best = True
+            print("===> Best Validation Avg. Error So Far: ({:.4f} {:.4f} {:.4f})".format(error1, error2, error3))
+            print("===> Best Epoch So Far:", epoch)
         if opt.kitti or opt.kitti2015:
-            if epoch%50 == 0 and epoch >= 300:
+            if (epoch%50 == 0 and epoch >= 300) or is_best:
                 save_checkpoint(opt.save_path, epoch,{
                         'epoch': epoch,
                         'state_dict': model.state_dict(),
