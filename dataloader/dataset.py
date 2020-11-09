@@ -189,6 +189,8 @@ def load_kitti_data(file_path, current_file):
     return temp_data
 def load_kitti2015_data(file_path, current_file):
     """ load current file from the list"""
+    # print("File Path:", file_path)
+    # print("Current File:", current_file)
     filename = file_path + 'image_2/' + current_file[0: len(current_file) - 1]
     left = Image.open(filename)
     filename = file_path + 'image_3/' + current_file[0: len(current_file) - 1]
@@ -249,6 +251,7 @@ class DatasetFromList(data.Dataset):
         if self.kitti: #load kitti dataset
             temp_data = load_kitti_data(self.data_path, self.file_list[index])
         elif self.kitti2015: #load kitti2015 dataset
+            # print("Loading file..")
             temp_data = load_kitti2015_data(self.data_path, self.file_list[index])
         else: #load scene flow dataset
             temp_data = load_data(self.data_path, self.file_list[index])

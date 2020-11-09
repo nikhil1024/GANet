@@ -62,7 +62,8 @@ if cuda:
 
 print('===> Loading datasets')
 train_set = get_training_set(opt.data_path, opt.training_list, [opt.crop_height, opt.crop_width], opt.left_right, opt.kitti, opt.kitti2015, opt.shift)
-test_set = get_test_set(opt.data_path, opt.val_list, [576,960], opt.left_right, opt.kitti, opt.kitti2015)
+# test_set = get_test_set(opt.data_path, opt.val_list, [576,960], opt.left_right, opt.kitti, opt.kitti2015)
+test_set = get_training_set(opt.data_path, opt.val_list, [opt.crop_height, opt.crop_width], opt.left_right, opt.kitti, opt.kitti2015, opt.shift)
 training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True, drop_last=True)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
@@ -79,7 +80,7 @@ if opt.resume:
         checkpoint = torch.load(opt.resume)
         model.load_state_dict(checkpoint['state_dict'], strict=False)
         # print("Loaded GANet-deep model successfully")
-        exit()
+        # exit()
 #        optimizer.load_state_dict(checkpoint['optimizer'])
     else:
         print("=> no checkpoint found at '{}'".format(opt.resume))
@@ -140,6 +141,8 @@ def train(epoch):
 
 
 def val():
+    epoch_error0 = 0
+    epoch_error1 = 0
     epoch_error2 = 0
 
     valid_iteration = 0
