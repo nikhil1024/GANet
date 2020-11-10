@@ -321,8 +321,8 @@ class CostAggregation(nn.Module):
         x = self.sga1(x, g['sg1'])
         rem0 = x
        
-        # if self.training:
-        disp0 = self.disp0(x)
+        if self.training:
+            disp0 = self.disp0(x)
 
         x = self.conv1a(x)
         x = self.sga11(x, g['sg11'])
@@ -340,8 +340,8 @@ class CostAggregation(nn.Module):
         x = self.deconv1a(x, rem0)
         x = self.sga2(x, g['sg2'])
         rem0 = x
-        # if self.training:
-        disp1 = self.disp1(x)
+        if self.training:
+            disp1 = self.disp1(x)
 
         x = self.conv1b(x, rem1)
         x = self.sga13(x, g['sg13'])
@@ -357,10 +357,10 @@ class CostAggregation(nn.Module):
         x = self.sga3(x, g['sg3'])
 
         disp2 = self.disp2(x, g['lg1'], g['lg2'])
-        # if self.training:
-        return disp0, disp1, disp2
-        # else:
-        #     return disp2
+        if self.training:
+            return disp0, disp1, disp2
+        else:
+            return disp2
 
 class GANet(nn.Module):
     def __init__(self, maxdisp=192):
@@ -403,8 +403,8 @@ class GANet(nn.Module):
         x1 = self.bn_relu(x1)
         g = torch.cat((g, x1), 1)
         g = self.guidance(g)
-        # if self.training:
-        disp0, disp1, disp2 = self.cost_agg(x, g)
-        return disp0, disp1, disp2
-        # else:
-        #     return self.cost_agg(x, g)
+        if self.training:
+            disp0, disp1, disp2 = self.cost_agg(x, g)
+            return disp0, disp1, disp2
+        else:
+            return self.cost_agg(x, g)

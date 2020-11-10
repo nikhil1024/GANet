@@ -153,7 +153,9 @@ def test(leftname, rightname, savename):
         input2 = input2.cuda()
     with torch.no_grad():
         prediction = model(input1, input2)
-     
+    
+    print(prediction.size())
+    print(prediction.dtype) 
     temp = prediction.cpu()
     temp = temp.detach().numpy()
     if height <= opt.crop_height and width <= opt.crop_width:
