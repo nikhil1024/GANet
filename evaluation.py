@@ -56,14 +56,14 @@ model = GANet(opt.max_disp)
 if cuda:
     model = torch.nn.DataParallel(model).cuda()
 
-if opt.resume:
-    if os.path.isfile(opt.resume):
-        print("=> loading checkpoint '{}'".format(opt.resume))
-        checkpoint = torch.load(opt.resume)
-        model.load_state_dict(checkpoint['state_dict'], strict=False)
+# if opt.resume:
+#     if os.path.isfile(opt.resume):
+#         print("=> loading checkpoint '{}'".format(opt.resume))
+#         checkpoint = torch.load(opt.resume)
+#         model.load_state_dict(checkpoint['state_dict'], strict=False)
        
-    else:
-        print("=> no checkpoint found at '{}'".format(opt.resume))
+#     else:
+#         print("=> no checkpoint found at '{}'".format(opt.resume))
 
 
 def readPFM(file): 
@@ -154,8 +154,6 @@ def test(leftname, rightname, savename):
     with torch.no_grad():
         prediction = model(input1, input2)
     
-    print(prediction.size())
-    print(prediction.dtype) 
     temp = prediction.cpu()
     temp = temp.detach().numpy()
     if height <= opt.crop_height and width <= opt.crop_width:
@@ -171,41 +169,59 @@ if __name__ == "__main__":
     file_list = opt.test_list
     f = open(file_list, 'r')
     filelist = f.readlines()
-    avg_error = 0
-    avg_rate = 0
-    for index in range(len(filelist)):
-        current_file = filelist[index]
-        if opt.kitti2015:
-            leftname = file_path + 'image_2/' + current_file[0: len(current_file) - 1]
-            rightname = file_path + 'image_3/' + current_file[0: len(current_file) - 1]
-            dispname = file_path + 'disp_occ_0/' + current_file[0: len(current_file) - 1]
-            savename = opt.save_path + current_file[0: len(current_file) - 1]
-            disp = Image.open(dispname)
-            disp = np.asarray(disp) / 256.0
-        elif opt.kitti:
-            leftname = file_path + 'colored_0/' + current_file[0: len(current_file) - 1]
-            rightname = file_path + 'colored_1/' + current_file[0: len(current_file) - 1]
-            dispname = file_path + 'disp_occ/' + current_file[0: len(current_file) - 1]
-            savename = opt.save_path + current_file[0: len(current_file) - 1]
-            disp = Image.open(dispname)
-            disp = np.asarray(disp) / 256.0
+    best_error = 999.0
+    best_rate = 999.0
+    best_model = ""
+    for model_path in glob.glob(opt.resume + "*2015_epoch*"):
+        if opt.resume:
+            if os.path.isfile(model_path):
+                print("=> loading checkpoint '{}'".format(model_path))
+                checkpoint = torch.load(model_path)
+                model.load_state_dict(checkpoint['state_dict'], strict=False)
+            else:
+                print("=> no checkpoint found at '{}'".format(model_path))
+        avg_error = 0
+        avg_rate = 0
+        for index in range(len(filelist)):
+            current_file = filelist[index]
+            if opt.kitti2015:
+                leftname = file_path + 'image_2/' + current_file[0: len(current_file) - 1]
+                rightname = file_path + 'image_3/' + current_file[0: len(current_file) - 1]
+                dispname = file_path + 'disp_occ_0/' + current_file[0: len(current_file) - 1]
+                savename = opt.save_path + current_file[0: len(current_file) - 1]
+                disp = Image.open(dispname)
+                disp = np.asarray(disp) / 256.0
+            elif opt.kitti:
+                leftname = file_path + 'colored_0/' + current_file[0: len(current_file) - 1]
+                rightname = file_path + 'colored_1/' + current_file[0: len(current_file) - 1]
+                dispname = file_path + 'disp_occ/' + current_file[0: len(current_file) - 1]
+                savename = opt.save_path + current_file[0: len(current_file) - 1]
+                disp = Image.open(dispname)
+                disp = np.asarray(disp) / 256.0
 
-        else:
-            leftname = opt.data_path + 'frames_finalpass/' + current_file[0: len(current_file) - 1]
-            rightname = opt.data_path + 'frames_finalpass/' + current_file[0: len(current_file) - 14] + 'right/' + current_file[len(current_file) - 9:len(current_file) - 1]
-            dispname = opt.data_path + 'disparity/' + current_file[0: len(current_file) - 4] + 'pfm'
-            savename = opt.save_path + str(index) + '.png'
-            disp, height, width = readPFM(dispname)
-       
-        prediction = test(leftname, rightname, savename)
-        mask = np.logical_and(disp >= 0.001, disp <= opt.max_disp)
+            else:
+                leftname = opt.data_path + 'frames_finalpass/' + current_file[0: len(current_file) - 1]
+                rightname = opt.data_path + 'frames_finalpass/' + current_file[0: len(current_file) - 14] + 'right/' + current_file[len(current_file) - 9:len(current_file) - 1]
+                dispname = opt.data_path + 'disparity/' + current_file[0: len(current_file) - 4] + 'pfm'
+                savename = opt.save_path + str(index) + '.png'
+                disp, height, width = readPFM(dispname)
 
-        error = np.mean(np.abs(prediction[mask] - disp[mask]))
-        rate = np.sum(np.abs(prediction[mask] - disp[mask]) > opt.threshold) / np.sum(mask)        
-        avg_error += error
-        avg_rate += rate
-        print("===> Frame {}: ".format(index) + current_file[0:len(current_file)-1] + " ==> EPE Error: {:.4f}, Error Rate: {:.4f}".format(error, rate))
-    avg_error = avg_error / len(filelist)
-    avg_rate = avg_rate / len(filelist)
-    print("===> Total {} Frames ==> AVG EPE Error: {:.4f}, AVG Error Rate: {:.4f}".format(len(filelist), avg_error, avg_rate))
+            prediction = test(leftname, rightname, savename)
+            mask = np.logical_and(disp >= 0.001, disp <= opt.max_disp)
+
+            error = np.mean(np.abs(prediction[mask] - disp[mask]))
+            rate = np.sum(np.abs(prediction[mask] - disp[mask]) > opt.threshold) / np.sum(mask)        
+            avg_error += error
+            avg_rate += rate
+            print("===> Frame {}: ".format(index) + current_file[0:len(current_file)-1] + " ==> EPE Error: {:.4f}, Error Rate: {:.4f}".format(error, rate))
+        avg_error = avg_error / len(filelist)
+        avg_rate = avg_rate / len(filelist)
+        print("===> Model: {} -- Total {} Frames ==> AVG EPE Error: {:.4f}, AVG Error Rate: {:.4f}".format(model_path.split("/")[-1], len(filelist), avg_error, avg_rate))
+        
+        if avg_rate < best_rate:
+            best_rate = avg_rate
+            best_error = avg_error
+            best_model = model_path.split("/")[-1]
+    
+    print("===> Best Model: {} ==> AVG EPE Error: {:.4f}, AVG Error Rate: {:.4f}".format(best_model, best_error, best_rate))
 
